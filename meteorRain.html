@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <style>
+    body {
+      background: #000000;
+    }
+  </style>
+  <body>
+    <canvas id="myCanvas" class="myCanvas"></canvas>
+    <script>
+      ;(function (win) {
+        function Orientation() {
+          this.init()
+        }
+        Orientation.prototype = {
+          init: function () {
+            //初始化方法，销毁前勿重复执行
+            const self = this
+            self.startsCount = 800
+            self.rainCount = 20
+
+            self.winWidth = window.innerWidth
+            self.winHeight = window.innerHeight
+
+            self.loadData()
+          },
+          starts: function (cxt, winWidth, winHeight) {
+            const self = this
+            this.x = winWidth * Math.random() //x坐标
+            this.y = winHeight * Math.random() //y坐标
+            this.text = '.' //文本
+            this.color = '#ffffff' //颜色
+
+            //产生随机颜色
+            this.getColor = function () {
+              let _r = Math.random()
+
+              if (_r < 0.5) {
+                this.color = '#333333'
+              } else {
+                this.color = '#ffffff'
+              }
+            }
+            //初始化
+            this.init = function () {
+              this.getColor()
+            }
+
+            //绘制
+            this.draw = function () {
+              //填充文字：context.fillText(text,x,y)
+              cxt.fillStyle = this.color
+              cxt.fillText(this.text, this.x, this.y)
+            }
+          },
+          drawMoon: function (cxt) {
+            const self = this
+            const moon = new Image()
+            moon.src = './image/TB1L4qmNpXXXXXhaFXXXXXXXXXX-261-269.png'
+            //cxt.drawImage(moon,0,0);
+            moon.onload = function () {
+              cxt.drawImage(moon, 10, 10, self.winWidth / 10, self.winWidth / 10)
+            }
+          },
+          loadData: function () {
+            const self = this
+            const starts = document.getElementById('myCanvas')
+            starts.width = self.winWidth
+            starts.height = self.winHeight
+            const arr = new Array() //星星数组
+            const rains = new Array() //流星雨数组
+
+            const cxt = document.getElementById('myCanvas').getContext('2d')
+            win.cxt = cxt
+
+            //画星星
+            for (let i = 0; i < self.startsCount; i++) {
+              const star = new self.starts(cxt, self.winWidth, self.winHeight)
+              star.init()
+              star.draw()
+              arr.push(star)
+            }
+
+            playStars()
+            //星星闪起来
+            function playStars() {
+              for (let n = 0; n < self.startsCount; n++) {
+                arr[n].getColor()
+                arr[n].draw()
+              }
+
+              setTimeout(playStars, 100)
+            }
+
+            //画月亮
+            //self.drawMoon(cxt);
+
+            /*画流星*/
+            for (let j = 0; j < self.rainCount; j++) {
+              const rain = new meteorRain()
+              rain.init()
+              rain.draw()
+              rains.push(rain)
+            }
+            playRains()
+            //流星划过
+            function playRains() {
+              for (let n = 0; n < self.rainCount; n++) {
+                const rain = rains[n]
+                rain.move() //移动
+                if (rain.y > window.innerHeight) {
+                  //超出界限后重来
+                  cxt.clearRect(rain.x, rain.y - rain.height, rain.width, rain.height)
+                  rains[n] = new meteorRain()
+                  rains[n].init()
+                }
+              }
+              self.drawMoon(cxt)
+              setTimeout(playRains, 2)
+            }
+          }
+        }
+
+        function init() {
+          new Orientation()
+        }
+
+        win.meteorRain = function () {
+          this.x = -1
+          this.y = -1
+          this.length = -1 //长度
+          this.angle = 30 //倾斜角度
+          this.width = -1 //宽度
+          this.height = -1 //高度
+          this.speed = 1 //速度
+          this.offset_x = -1 //横轴移动的距离
+          this.offset_y = -1 //纵轴移动的距离
+          this.alpha = 1 //透明度
+          this.color1 = '' //流星的色彩
+          this.color2 = '' //流星的色彩
+          this.winWidth = window.innerWidth
+          this.winHeight = window.innerHeight
+          this.init()
+        }
+        win.meteorRain.prototype = {
+          /*获取随机坐标*/
+          getPos: function () {
+            const self = this
+            self.x = Math.random() * self.winWidth
+            self.y = Math.random() * self.winHeight
+          },
+          //随机获取中段颜色
+          getRandomColors: function () {
+            const self = this
+            let a = 250 - Math.ceil(240 * Math.random())
+            //中段颜色
+            this.color1 = 'rgba(' + a + ',' + a + ',' + a + ',1)'
+            //结束颜色
+            this.color2 = 'rgba(0,0,0,1)'
+          },
+          //重新计算流星坐标的函数
+          countPos: function () {
+            const self = this
+            //往左下移动,x减少，y增加
+            self.x = self.x - self.offset_x
+            self.y = self.y + self.offset_y
+          },
+
+          /*绘制流星*/
+          draw: function () {
+            const self = this
+            const cxt = self.cxt
+            cxt.save() //保存了当前context的状态
+            cxt.beginPath()
+            cxt.lineWidth = 2
+            cxt.globalAlpha = self.alpha //透明度
+
+            //创建横向渐变颜色,起点坐标至终点坐标
+            //线性渐变 var lg= context.createLinearGradient(xStart,yStart,xEnd,yEnd)
+            //线性渐变颜色lg.addColorStop(offset,color)
+            let line = cxt.createLinearGradient(self.x, self.y, self.x + self.width, self.y - self.height)
+
+            line.addColorStop(0, '#ffffff')
+            line.addColorStop(0.3, self.color1)
+            line.addColorStop(0.6, self.color2)
+            cxt.strokeStyle = line
+
+            cxt.moveTo(self.x, self.y)
+            cxt.lineTo(self.x + self.width, self.y - self.height)
+            cxt.closePath()
+            cxt.stroke()
+            cxt.restore() //恢复到刚刚保存的状态,保存恢复只能使用一次
+          },
+          //流星划过
+          move: function () {
+            const self = this
+            let x = self.x + self.width - self.offset_x
+            let y = self.y - self.height
+            self.cxt.clearRect(x - 3, y - 3, self.offset_x + 5, self.offset_y + 5)
+
+            //重新计算位置，往左下移动
+            self.countPos()
+            //透明度增加
+            self.alpha -= 0.002
+            //重绘
+            self.draw()
+          },
+          init: function () {
+            const self = this
+            self.cxt = win.cxt
+            self.getPos()
+            self.getRandomColors()
+            //获取每条流星的长度
+            let x = Math.random() * 80 + 150
+            this.length = Math.ceil(x)
+            //获取流星的速度
+            x = Math.random() + 1.5
+            this.speed = x //Math.ceil(x);
+            let cos = Math.cos((this.angle * 3.14) / 180)
+            let sin = Math.sin((this.angle * 3.14) / 180)
+            this.width = this.length * cos //流星所占宽度
+            this.height = this.length * sin //流星所占高度
+            this.offset_x = this.speed * cos
+            this.offset_y = this.speed * sin
+          }
+        }
+
+        window.addEventListener('DOMContentLoaded', init, false)
+      })(window)
+    </script>
+  </body>
+</html>
